@@ -28,3 +28,23 @@ The main dependencies are listed in [requirements.txt](requirements.txt)
 
 Additionally, the `en_core_web_sm` spacy model is used by the tokenizer.
 
+## Usage
+I haven't made this code fully transformers-compliant, but it's close.
+The basics:
+```python
+model = HlmForSequenceClassification(model_path, num_labels=2)
+
+tokenizer = HlmTokenizer()
+
+data_collator = HlmDataCollatorForSequenceClassification(tokenizer=tokenizer)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_imdb["train"],
+    eval_dataset=tokenized_imdb["test"],
+    processing_class=tokenizer,
+    data_collator=data_collator,
+    compute_metrics=compute_metrics,
+)
+```
