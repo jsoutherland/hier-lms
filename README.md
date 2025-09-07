@@ -23,3 +23,8 @@ Despite that:
 * I have models smaller than distilbert, that perform well on downstream tasks
 * I believe that this project will benefit other projects of mine, which require it to be open sourced.
 
+## Dependencies
+The main dependencies are listed in [requirements.txt](requirements.txt)
+
+Additionally, the `en_core_web_sm` spacy model is used by the tokenizer.
+
