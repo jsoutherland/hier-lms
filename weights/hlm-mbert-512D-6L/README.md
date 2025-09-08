@@ -22,7 +22,7 @@ That said, this model  beats the larger 768D [distilbert-base-cased](distilbert/
 model on downstream tasks involving heavy text corruption, such as `imdb` with text corruption as described
 in the paper.
 
-When fine-tuning with this base model, it reaches F1 of 0.86 while the best I have achieved with distilbert-base-cased is 0.78.
+When fine-tuning with this base model, it reaches F1 of 0.844 while the best I have achieved with distilbert-base-cased is 0.78.
 
 ### Speed
 This is a slower model than usual because:
