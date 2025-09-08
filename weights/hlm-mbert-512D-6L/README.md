@@ -13,7 +13,7 @@ plus special characters, including one for unknown characters.
 ### Training
 This was trained using a MLM task, as described in the paper.
 
-I used a combination of `wikipedia-20220301.en.hf` and `openwebtexts` datasets.
+I used a combination of `wikipedia-20220301.en.hf` and `openwebtext` datasets.
 
 This is only a partially trained model on 146k steps (less than one epoch). 
 I will likely update these weights after I evaluate model that has been trained further.
