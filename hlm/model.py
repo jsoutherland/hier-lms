@@ -148,12 +148,14 @@ class HlmForSequenceClassification(nn.Module):
                  base_model_path: str,
                  num_labels: int = 2,
                  seq_classif_dropout: float = 0.1,
-                 problem_type: str = "single_label_classification"):
+                 problem_type: str = "single_label_classification",
+                 aggregation: str = "mean"):
         super().__init__()
         self.base_model = HlmBaseModel.from_pretrained(base_model_path)
         self.dim = self.base_model.word_model.config.hidden_size
         self.num_labels = num_labels
         self.problem_type = problem_type
+        self.aggregation = aggregation
         self.seq_classif_dropout = seq_classif_dropout
         self.head = ClassifierHead(self.dim, num_labels, seq_classif_dropout, problem_type)
 
@@ -178,6 +180,7 @@ class HlmForSequenceClassification(nn.Module):
             num_labels=config["num_labels"],
             seq_classif_dropout=config["seq_classif_dropout"],
             problem_type=config["problem_type"],
+            aggregation=config["aggregation"],
         )
 
         # base model is loaded, need to load the head
@@ -195,6 +198,7 @@ class HlmForSequenceClassification(nn.Module):
             "num_labels": self.num_labels,
             "seq_classif_dropout": self.seq_classif_dropout,
             "problem_type": self.problem_type,
+            "aggregation": self.aggregation,
         }
         with open(config_fpath, "w") as fout:
             json.dump(config, fout, indent=4)
@@ -251,10 +255,20 @@ class HlmForSequenceClassification(nn.Module):
 
             _mask = attention_mask[:,:,:1]  # B, S, 1
             _mask = _mask.expand(_embeds.shape).float()
-            maked_embeds = _embeds * _mask
-            sum_embeds = torch.sum(maked_embeds, dim=1)
-            sum_mask = torch.clamp(_mask.sum(1), min=1e-9)
-            pooled_output = sum_embeds / sum_mask
+
+            if self.aggregation == "mean":
+                maked_embeds = _embeds * _mask
+                sum_embeds = torch.sum(maked_embeds, dim=1)
+                sum_mask = torch.clamp(_mask.sum(1), min=1e-9)
+                pooled_output = sum_embeds / sum_mask
+            elif self.aggregation == "max":
+                masked_embeds = torch.where(_mask == 0, -torch.inf, _embeds)
+                pooled_output = torch.max(masked_embeds, dim=1).values
+            elif self.aggregation == "min":
+                masked_embeds = torch.where(_mask == 0, torch.inf, _embeds)
+                pooled_output = torch.min(masked_embeds, dim=1).values
+            else:
+                raise NotImplementedError(f"Aggregation {self.aggregation} not implemented")
 
             logits = self.head(pooled_output)
             loss = self.calc_loss(logits, labels)

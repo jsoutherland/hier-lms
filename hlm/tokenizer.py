@@ -1,7 +1,7 @@
 # Copyright 2025 Joshua Southerland
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 from spacy import load as spacy_load
 from enum import Enum
 
@@ -119,15 +119,20 @@ class HlmTokenizer:
         out.append(SpecialToken.W_SEP.value)
         return out
 
-    def tokenize(self, input_seq: str) -> List[str]:
+    def tokenize(self, input_seq: str, max_length: Optional[int] = None) -> List[str]:
         doc = self.nlp(input_seq)
         out = [[SpecialToken.CLS.value]]
 
         for sent in doc.sents:
             word_toks = [self.tokenize_word(word.text) for word in sent]
             out.extend(word_toks)
+            if max_length and len(out) >= (max_length-1): # -1 because we plan to add SEP
+                break
 
         out.append([SpecialToken.SEP.value])
+        if max_length:
+            out = out[:max_length]
+
         return out
 
     def decode_word(self, tokens: List[int]) -> str:
@@ -138,8 +143,11 @@ class HlmTokenizer:
             out += chr(tok-ORD_OFFSET)
         return out
 
-    def encode(self, input_seq: str, return_special_tokens_mask: bool = False) -> Dict[str, List[int]]:
-        all_toks = self.tokenize(input_seq)
+    def encode(self,
+               input_seq: str,
+               return_special_tokens_mask: bool = False,
+               max_length: Optional[int] = None) -> Dict[str, List[int]]:
+        all_toks = self.tokenize(input_seq, max_length)
         input_ids  = []
         for toks in all_toks:
             # sentence
@@ -174,10 +182,14 @@ class HlmTokenizer:
         return result
 
 
-    def batch_encode(self, input_seqs: List[str], return_special_tokens_mask: bool = False) -> [Dict[str, List[List[int]]]]:
+    def batch_encode(self,
+                     input_seqs: List[str],
+                     return_special_tokens_mask: bool = False,
+                     max_length: Optional[int] = None) -> [Dict[str, List[List[int]]]]:
         out = [
             self.encode(input_seq,
-                        return_special_tokens_mask=return_special_tokens_mask) for input_seq in input_seqs
+                        return_special_tokens_mask=return_special_tokens_mask,
+                        max_length=max_length) for input_seq in input_seqs
         ]
 
         # [ {input_ids: [], specials: []}, {input_ids: [], specials: []}....]
@@ -190,15 +202,17 @@ class HlmTokenizer:
 
     def __call__(self,
                  input_seqs: List[str],
-                 max_length: int=512,
+                 max_length: int = 512,
                  truncation: bool = True,
+                 padding: bool = False, # TODO: implement
                  return_special_tokens_mask: bool = False
     ) -> Dict[str, List[List[int]]]:
         # TODO: implement max length, default to None
         # TODO: truncation
         # TODO: return type hint
         return self.batch_encode(input_seqs,
-                                 return_special_tokens_mask=return_special_tokens_mask)
+                                 return_special_tokens_mask=return_special_tokens_mask,
+                                 max_length=max_length)
 
     def pad(self, *args, **kwargs):
         # TODO: implement for transformers lib
